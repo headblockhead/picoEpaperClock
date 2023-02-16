@@ -12,6 +12,7 @@ add_subdirectory(examples)
 
 # add a header directory
 include_directories(examples)
+include_directories(./lib/e-Paper)
 include_directories(./lib/Config)
 include_directories(./lib/GUI)
 
