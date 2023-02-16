@@ -1,2 +1,2 @@
 # picoEpaperClock
-An alarm clock written in tinygo made for the pico and the pico-waveshare epaper display
+An alarm clock written in C and made for the pico + pico-waveshare epaper display.
