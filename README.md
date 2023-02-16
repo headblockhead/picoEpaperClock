@@ -17,6 +17,6 @@ Requires: Build
 Builds, then uploads the project to the pico.
 ```bash
 cd build
-sudo picotool load ./clock.uf2
-sudo picotool reboot
+sudo picotool load ./clock.uf2 -F
+sudo picotool reboot -F
 ```
