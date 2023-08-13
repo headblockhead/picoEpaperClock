@@ -2,135 +2,169 @@
 #include "Debug.h"
 #include "EPD_2in13bc.h"
 #include "GUI_Paint.h"
-#include "ImageData.h"
+#include "hardware/clocks.h"
+#include "hardware/vreg.h"
+#include "pico/cyw43_arch.h"
+#include <stdio.h>
 #include <stdlib.h> // malloc() free()
 
-int EPD_2in13bc_test(void) {
-  printf("EPD_2IN13BC_test Demo\r\n");
-  if (DEV_Module_Init() != 0) {
-    return -1;
+char *concat(const char *s1, const char *s2) {
+  const size_t len1 = strlen(s1);
+  const size_t len2 = strlen(s2);
+  char *result = malloc(len1 + len2 + 1); // +1 for the null-terminator
+  // in real code you would check for errors in malloc here
+  memcpy(result, s1, len1);
+  memcpy(result + len1, s2, len2 + 1); // +1 to copy the null-terminator
+  return result;
+}
+
+char *wifiNetwork = "";
+int wifiFound = 0;
+
+static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
+  if (result && !wifiFound) {
+    wifiNetwork = concat(wifiNetwork, ",");
+    wifiNetwork = concat(wifiNetwork, result->ssid);
+    wifiFound = 1;
+    //    printf("ssid: %-32s rssi: %4d chan: %3d mac:
+    //    %02x:%02x:%02x:%02x:%02x:%02x "
+    //           "sec: %u\n",
+    //           result->ssid, result->rssi, result->channel, result->bssid[0],
+    //           result->bssid[1], result->bssid[2], result->bssid[3],
+    //           result->bssid[4], result->bssid[5], result->auth_mode);
   }
-
-  printf("e-Paper Init and Clear...\r\n");
-  EPD_2IN13BC_Init();
-  EPD_2IN13BC_Clear();
-  DEV_Delay_ms(500);
-
-  // Create a new image cache named IMAGE_BW and fill it with white
-  UBYTE *BlackImage, *RYImage; // Red or Yellow
-  UWORD Imagesize =
-      ((EPD_2IN13BC_WIDTH % 8 == 0) ? (EPD_2IN13BC_WIDTH / 8)
-                                    : (EPD_2IN13BC_WIDTH / 8 + 1)) *
-      EPD_2IN13BC_HEIGHT;
-  if ((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
-    printf("Failed to apply for black memory...\r\n");
-    return -1;
-  }
-  if ((RYImage = (UBYTE *)malloc(Imagesize)) == NULL) {
-    printf("Failed to apply for red memory...\r\n");
-    return -1;
-  }
-  printf("NewImage:BlackImage and RYImage\r\n");
-  Paint_NewImage(BlackImage, EPD_2IN13BC_WIDTH, EPD_2IN13BC_HEIGHT, 270, WHITE);
-  Paint_NewImage(RYImage, EPD_2IN13BC_WIDTH, EPD_2IN13BC_HEIGHT, 270, WHITE);
-
-  // Select Image
-  Paint_SelectImage(BlackImage);
-  Paint_Clear(WHITE);
-  Paint_SelectImage(RYImage);
-  Paint_Clear(WHITE);
-
-#if 1 // show image for array
-  printf("show image for array\r\n");
-  //    EPD_2IN13BC_Display(gImage_2in13b_b, gImage_2in13b_r);
-
-  EPD_2IN13BC_Display(gImage_2in13c_b, gImage_2in13c_y);
-  DEV_Delay_ms(2000);
-#endif
-
-#if 1 // Drawing on the image
-  /*Horizontal screen*/
-  // 1.Draw black image
-  printf("Draw black image\r\n");
-  Paint_SelectImage(BlackImage);
-  Paint_Clear(WHITE);
-  Paint_DrawPoint(5, 70, BLACK, DOT_PIXEL_1X1, DOT_STYLE_DFT);
-  Paint_DrawPoint(5, 80, BLACK, DOT_PIXEL_2X2, DOT_STYLE_DFT);
-  Paint_DrawLine(20, 70, 50, 100, BLACK, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-  Paint_DrawLine(50, 70, 20, 100, BLACK, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-  Paint_DrawRectangle(60, 70, 90, 100, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-  Paint_DrawCircle(125, 85, 15, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-  Paint_DrawString_EN(5, 15, "EH", &Font12, WHITE, BLACK);
-
-  // 2.Draw red image
-  printf("Draw red image\r\n");
-  Paint_SelectImage(RYImage);
-  Paint_Clear(WHITE);
-  Paint_DrawPoint(5, 90, RED, DOT_PIXEL_3X3, DOT_STYLE_DFT);
-  Paint_DrawPoint(5, 100, RED, DOT_PIXEL_4X4, DOT_STYLE_DFT);
-  Paint_DrawLine(125, 70, 125, 100, RED, DOT_PIXEL_1X1, LINE_STYLE_DOTTED);
-  Paint_DrawLine(110, 85, 140, 85, RED, DOT_PIXEL_1X1, LINE_STYLE_DOTTED);
-  Paint_DrawRectangle(20, 70, 50, 100, RED, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-  Paint_DrawCircle(165, 85, 15, RED, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-  Paint_DrawString_EN(5, 0, "waveshare Electronics", &Font12, BLACK, WHITE);
-  Paint_DrawNum(5, 50, 987654321, &Font16, WHITE, RED);
-
-  printf("EPD_Display\r\n");
-  EPD_2IN13BC_Display(BlackImage, RYImage);
-  DEV_Delay_ms(2000);
-#endif
-
-  printf("Clear...\r\n");
-  EPD_2IN13BC_Clear();
-
-  printf("Goto Sleep...\r\n");
-  EPD_2IN13BC_Sleep();
-  free(BlackImage);
-  free(RYImage);
-  BlackImage = NULL;
-  RYImage = NULL;
-  DEV_Delay_ms(2000); // important, at least 2s
-  // close 5V
-  printf("close 5V, Module enters 0 power consumption ...\r\n");
-  DEV_Module_Exit();
-
   return 0;
 }
 
 int main(void) {
-  // while(1) {
-
-  // DEV_Delay_ms(10000);
-  // }
   DEV_Delay_ms(500);
-  // EPD_2in9_V2_test();
-  // EPD_2in9bc_test();
-  // EPD_2in9b_V3_test();
-  // EPD_2in9d_test();
 
-  // EPD_2in13_V2_test();
-  //  EPD_2in13_V3_test();
-  EPD_2in13bc_test();
-  // EPD_2in13b_V3_test();
-  // EPD_2in13b_V4_test();
-  // EPD_2in13d_test();
+  // Wifi stuff
+  stdio_init_all();
 
-  // EPD_2in66_test();
-  // EPD_2in66b_test();
+  if (cyw43_arch_init()) {
+    printf("failed to initialise\n");
+    return 1;
+  }
 
-  // EPD_2in7_test();
+  cyw43_arch_enable_sta_mode();
 
-  // EPD_3in7_test();
+  absolute_time_t scan_time = nil_time;
+  bool scan_in_progress = false;
 
-  // EPD_4in2_test();
-  // EPD_4in2b_V2_test();
-  // EPD_5in65f_test();
+  if (absolute_time_diff_us(get_absolute_time(), scan_time) < 0) {
+    if (!scan_in_progress) {
+      cyw43_wifi_scan_options_t scan_options = {0};
+      int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result);
+      if (err == 0) {
+        printf("\nPerforming wifi scan\n");
+        scan_in_progress = true;
+      } else {
+        printf("Failed to start scan: %d\n", err);
+        scan_time = make_timeout_time_ms(10000); // wait 10s and scan again
+      }
+    } else if (!cyw43_wifi_scan_active(&cyw43_state)) {
+      scan_time = make_timeout_time_ms(10000); // wait 10s and scan again
+      scan_in_progress = false;
+    }
+  }
+  // the following #ifdef is only here so this same example can be used in
+  // multiple modes; you do not need it in your code
+#if PICO_CYW43_ARCH_POLL
+  // if you are using pico_cyw43_arch_poll, then you must poll periodically from
+  // your main loop (not from a timer) to check for Wi-Fi driver or lwIP work
+  // that needs to be done.
+  cyw43_arch_poll();
+  // you can poll as often as you like, however if you have nothing else to do
+  // you can choose to sleep until either a specified time, or cyw43_arch_poll()
+  // has work to do:
+  cyw43_arch_wait_for_work_until(scan_time);
+#else
+  // if you are not using pico_cyw43_arch_poll, then WiFI driver and lwIP work
+  // is done via interrupt in the background. This sleep is just an example of
+  // some (blocking) work you might be doing.
+  sleep_ms(1000);
+#endif
+  sleep_ms(10000);
 
-  // EPD_5in83_V2_test();
-  // EPD_5in83b_V2_test();
+  // Initialize the GPIOs
+  if (DEV_Module_Init() != 0) {
+    return -1;
+  }
+  // Initialize the display.
+  EPD_2IN13BC_Init();
 
-  // EPD_7in5_V2_test();
-  // EPD_7in5b_V2_test();
+  // Clear the display.
+  EPD_2IN13BC_Clear();
+
+  // The black colour and red colour are stored seperatly.
+
+  // Create two images for black and red.
+  UBYTE *BlackAndWhiteImage, *RedAndWhiteImage;
+  UWORD Imagesize =
+      ((EPD_2IN13BC_WIDTH % 8 == 0) ? (EPD_2IN13BC_WIDTH / 8)
+                                    : (EPD_2IN13BC_WIDTH / 8 + 1)) *
+      EPD_2IN13BC_HEIGHT;
+  // Allocate memory for them.
+  if ((BlackAndWhiteImage = (UBYTE *)malloc(Imagesize)) == NULL) {
+    printf("Allocating memory for BlackAndWhiteImage failed.\r\n");
+    return -1;
+  }
+  if ((RedAndWhiteImage = (UBYTE *)malloc(Imagesize)) == NULL) {
+    printf("Allocating memory for RedAndWhiteImage failed.\r\n");
+    return -1;
+  }
+  // Fill with white.
+  Paint_NewImage(BlackAndWhiteImage, EPD_2IN13BC_WIDTH, EPD_2IN13BC_HEIGHT, 270,
+                 WHITE);
+  Paint_NewImage(RedAndWhiteImage, EPD_2IN13BC_WIDTH, EPD_2IN13BC_HEIGHT, 270,
+                 WHITE);
+
+  Paint_SelectImage(BlackAndWhiteImage);
+
+  // Clear BlackAndWhite with white.
+  Paint_SelectImage(BlackAndWhiteImage);
+  Paint_Clear(WHITE);
+  // Draw the black image.
+  Paint_DrawString_EN(0, 15, "12345", &Font12, WHITE, BLACK);
+
+  // Clear RedAndWhite with white.
+  Paint_SelectImage(RedAndWhiteImage);
+  Paint_Clear(WHITE);
+  // Draw the red image.
+  Paint_DrawString_EN(0, 0, "ABCD", &Font12, WHITE, BLACK);
+  Paint_DrawLine(0, 12, EPD_2IN13BC_HEIGHT, 12, RED, DOT_PIXEL_1X1,
+                 LINE_STYLE_DOTTED);
+  Paint_DrawString_EN(0, 27, wifiNetwork, &Font12, WHITE, BLACK);
+
+  // Display the red and black images as one image.
+  EPD_2IN13BC_Display(BlackAndWhiteImage, RedAndWhiteImage);
+
+  // Wait for 10 seconds to show the image.
+  DEV_Delay_ms(10000);
+
+  // Clear the screen to prevent burn-in during storage.
+  EPD_2IN13BC_Clear();
+
+  // Put the screen to sleep, uses minimal power.
+  EPD_2IN13BC_Sleep();
+
+  // Free the memory allocated to the images.
+  free(BlackAndWhiteImage);
+  free(RedAndWhiteImage);
+  // Delete the images.
+  BlackAndWhiteImage = NULL;
+  RedAndWhiteImage = NULL;
+
+  // Wait for the display to shut down - important! Must be at least two
+  // seconds.
+  DEV_Delay_ms(2000);
+
+  // Stop sending 5v to the screen, turns it off, using no power.
+  DEV_Module_Exit();
+
+  // wifi
+  cyw43_arch_deinit();
 
   return 0;
 }
